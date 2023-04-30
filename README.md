@@ -9,6 +9,7 @@ dataset folder:
     TC5 --- Sleep Apnea dataset
 
 script folder:
+
     - search.py : for finding the best configuration for a given reference/train dataset, e.g. dataset/TC1/train.csv
 
     - evaluate.py for evaluating the best configured model against the test dataset, e.g., dataset/TC1/test.csv
