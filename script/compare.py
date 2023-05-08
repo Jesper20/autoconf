@@ -51,7 +51,8 @@ def plot_prediction(X_test, y_pred, y_test, result):
 if __name__ == '__main__':
     start_time = time.time()
 
-    test_cases = [1, 2, 3, 4, 5]
+    #test_cases = [1, 2, 3, 4, 5]
+    test_cases = [7]
 
     # define outlier/anomaly detection methods to be compared.
     outliers_fraction = 0.15  # this is like a threshold -- specifies % of outliers in ref dataset
@@ -73,6 +74,7 @@ if __name__ == '__main__':
 
         X = pd.read_csv(normal_file, header=0, index_col=None)
         test_X = pd.read_csv(anomaly_file, header=0, index_col=None)
+        print(X.columns, test_X.columns)
         y_test = test_X['label']
         X_test = test_X.drop('label', axis=1)
         y = [0] * len(X) # all labeled as 0

@@ -1,4 +1,5 @@
 import time
+import os as os
 import pickle
 import random
 import matplotlib.pyplot as plt
@@ -253,9 +254,6 @@ def evaluate_bad_MR(mr, space, n, n_samples, data, labels):
 
     msr = err / n_samples # return ratio (0 - 1) instead of absolute value. 
     
-    #print(f"#cluster errors (Bad MR): {err}. MSR: {msr}")
-    # print(f"Bad MR => Correct: {n_samples - err}. Err: {err}. MSR: {msr}")
-    # plot(model2, data, space, err, mr)
     return msr  # return mean squared error
 
 def evaluate_good_MR(mr, space, n, n_samples, data, labels):
@@ -289,7 +287,7 @@ def buildmodel(space):
         c = False if space['algo']['cluster_all'] == 0 else True
         model = MeanShift(bin_seeding=b, cluster_all=c)
     elif space['algo']['model'] == 'dbscan':
-        model = DBSCAN(eps=round(space['eps'],2), min_samples=int(space['min_samples']), metric=space['metric'], algorithm=space['algorithm'])
+        model = DBSCAN(eps=round(space['algo']['eps'],2), min_samples=int(space['algo']['min_samples']), metric=space['algo']['metric'], algorithm=space['algo']['algorithm'])
     elif space['algo']['model'] == 'optics':
         model = OPTICS(max_eps=round(space['algo']['max_eps'],2), min_samples=int(space['algo']['optics_min_samples']))
     elif space['algo']['model'] == 'affinitypropagation':
@@ -352,7 +350,7 @@ def objective(space):
     n_samples = 100
     n = round(random.random() * len(X)) # generate a random index to slice from X 
    
-    # Bad MRs that expect different outcomes for manipulated samples
+    # Anomaly MRs that expect different outcomes for manipulated samples
     X2 = MRB1(X, 0, n, n_samples) # modify an attribute of bad samples
     errors.append(evaluate_bad_MR('b1', space, n, n_samples, X2, labels))  
     X2 = MRB2(X, n, n_samples) # modify multiple attributes of bad samples
@@ -362,7 +360,7 @@ def objective(space):
     X2 = MRB4(X, model, model_name, n_clusters, n_samples)  # add bad instances
     errors.append(evaluate_bad_MR('b4', space, len(X), n_samples, X2, labels)) 
 
-    # Good MRs that expect exact same clustering as X
+    # Benign MRs that expect exact same clustering as X
     # print(f"Good MR...")
     X2 = MRB1(X, 0, n, 1) # modify an attribute of ONE sample (white noise)
     errors.append(evaluate_good_MR('Good_b1', space, n, n_samples, X2, labels)) 
@@ -382,38 +380,6 @@ def objective(space):
         'eval_time': time.time()
         }
 
-def predict(model_name, model, data, sample):
-    X_copy = data.copy()
-    X_copy['label'] = model.labels_
-    threshold = 1
-    label = 0
-
-    if model_name == "kmeans" or model_name == "minibatchkmeans":
-        components = model.cluster_centers_
-        dists = np.sqrt(np.sum((components - sample)**2, axis=1))
-        i = np.argmin(dists)
-        cluster_center = components[i]
-        cluster_members = X_copy[X_copy['label']==i].copy() 
-        cluster_members = cluster_members.drop('label', axis=1)
-
-        dists_cluster_members = np.sqrt(np.sum((cluster_members - cluster_center)**2))
-        max_member = np.argmax(dists_cluster_members)
-        if dists[i] < dists_cluster_members[max_member]:
-            label = 0  
-        elif dists[i] > dists_cluster_members[max_member] * threshold:
-            label = 1
-    else:
-        components = model.components_
-        dists = np.sqrt(np.sum((components - sample)**2, axis=1))
-        i = np.argmin(dists)
-        if dists[i] < model.eps:
-            label = 0  # use binary (normal=0, anomaly=1)
-        elif dists[i] > model.eps * threshold:
-            label = 1
-    
-    return label
-
-
 if __name__ == '__main__':
     start_time = time.time()
     ################### Define Parameters ###################
@@ -423,15 +389,17 @@ if __name__ == '__main__':
     TC = 1
     n_trials = 10000
     n_samples = 100 # number of samples to manipulate. It could be 10% of data => n_samples = round(0.1 * len(X))
-    threshold = 1
-    save_trials = f"output/trial_TC{TC}.p"
-    loss_file = f"output/losses_TC{TC}.csv"  # save losses at each trial here
-    conf_file = f"output/best_TC{TC}.csv"
-    train_file = f'dataset/TC{TC}/train.csv' 
+   
+    path = ".."
+    save_trials = os.path.join(path,f"output/trial_TC{TC}.p")
+    loss_file = os.path.join(path,f"output/losses_TC{TC}.csv")  # save losses at each trial here
+    conf_file = os.path.join(path, f"output/best_TC{TC}.csv")
+    train_file = os.path.join(path, f'dataset/TC{TC}/train.csv')
     
     #########################################################
     # define certain params for search space
     models = ['kmeans', 'minibatchkmeans','dbscan']
+    models = ['dbscan']
     metrics =  ['cityblock', 'euclidean', 'l1', 'l2', 'manhattan']
     algorithms = ['auto', 'ball_tree', 'kd_tree', 'brute'] # nearest neighbours algo
     stats = ["mean", "variance", "min", "max"]
@@ -447,16 +415,16 @@ if __name__ == '__main__':
    
     # define search space and appropriate distribution below
     space = {
-    'h' : hp.quniform('h', 30, 50, 1),
-    'overlap' : hp.uniform('overlap', 0.5, 1),
+    'h' : hp.quniform('h', 30, 1500, 1),
+    'overlap' : hp.uniform('overlap', 0, 1),
     "algo": hp.choice(
         "algo",
         [
             {"model": "kmeans", 'n_clusters' : hp.quniform('n_clusters', 1, 15, 1)},
             {"model": "minibatchkmeans", 'minik_n_clusters' : hp.quniform('minik_n_clusters', 1, 15, 1), 'max_iter': hp.choice('max_iter', [50, 100, 150]), 'batch_size': hp.choice('batch_size', [256, 512, 1024, 2048])},
             {"model": "meanshift", "bin_seeding": hp.choice('bin_seeding', [0, 1]), "cluster_all": hp.choice('cluster_all', [0, 1])},
-            {"model": "dbscan", "eps": hp.uniform('eps', 0.3, 5), 'min_samples' : hp.quniform('min_samples', 5, 70, 1), 'metric': hp.choice('metric', metrics),'algorithm': hp.choice('algorithm', algorithms)},
-            {"model": "optics", "max_eps": hp.uniform('max_eps', 3, 5), 'optics_min_samples' : hp.quniform('optics_min_samples', 5, 70, 1)},
+            {"model": "dbscan", "eps": hp.uniform('eps', 0.1, 5), 'min_samples' : hp.quniform('min_samples', 5, 70, 1), 'metric': hp.choice('metric', metrics),'algorithm': hp.choice('algorithm', algorithms)},
+            {"model": "optics", "max_eps": hp.uniform('max_eps', 0.1, 5), 'optics_min_samples' : hp.quniform('optics_min_samples', 5, 70, 1)},
             {"model": "affinitypropagation", 'damping' : hp.uniform('damping', 0.5, 1), "convergence_iter": hp.quniform('convergence_iter', 10, 30, 1)}
         ]
     )
@@ -486,7 +454,7 @@ if __name__ == '__main__':
         loss = round(res['result']['loss'], 4)
         if loss < min_loss:
             min_loss = loss
-    best['search_time'] = f'{(time.time() - search_start_time)/60:.2f}'
+
     best['n_trials'] = n_trials
     best['loss'] = min_loss
     pd.DataFrame.from_dict(best, orient='index', columns=['value']).to_csv(conf_file)

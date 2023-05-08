@@ -1,4 +1,5 @@
 import time
+import os as os
 import numpy as np
 import pandas as pd
 import math
@@ -26,9 +27,8 @@ def getData(df,h,overlap):
     data = { } 
     
     for stat in stats:
-        for index, col in enumerate(cols):
+        for _, col in enumerate(cols):
             feature = stat + "_" + col
-            # temp.append([])
             data[feature] = []
     if hasLabel:
         data['label'] = []
@@ -79,7 +79,7 @@ def buildmodel(space):
         c = False if space['algo']['cluster_all'] == 0 else True
         model = MeanShift(bin_seeding=b, cluster_all=c)
     elif space['algo']['model'] == 'dbscan':
-        model = DBSCAN(eps=round(space['eps'],2), min_samples=int(space['min_samples']), metric=space['metric'], algorithm=space['algorithm'])
+        model = DBSCAN(eps=round(space['algo']['eps'],2), min_samples=int(space['algo']['min_samples']), metric=space['algo']['metric'], algorithm=space['algo']['algorithm'])
     elif space['algo']['model'] == 'optics':
         model = OPTICS(max_eps=round(space['algo']['max_eps'],2), min_samples=int(space['algo']['optics_min_samples']))
     elif space['algo']['model'] == 'affinitypropagation':
@@ -92,7 +92,7 @@ def predict(model_name, model, data, sample):
     X_copy = data.copy()
     X_copy['label'] = model.labels_
     threshold = 1
-    label = 0
+    label = 0 # use binary (normal=0, anomaly=1)
 
     if model_name == "kmeans" or model_name == "minibatchkmeans":
         components = model.cluster_centers_
@@ -103,19 +103,31 @@ def predict(model_name, model, data, sample):
         cluster_members = cluster_members.drop('label', axis=1)
 
         dists_cluster_members = np.sqrt(np.sum((cluster_members - cluster_center)**2))
-        max_member = np.argmax(dists_cluster_members)
-        if dists[i] < dists_cluster_members[max_member]:
-            label = 0  
-        elif dists[i] > dists_cluster_members[max_member] * threshold:
+        avg_member = np.mean(dists_cluster_members)
+        std_member = np.std(dists_cluster_members)
+        if dists[i] > avg_member + 2 * std_member:
             label = 1
-    else:
+        
+    elif model_name == "optics":
+        components = model.core_distances_
+        dists = np.sqrt(np.sum((components - sample)**2, axis=1))
+        i = np.argmin(dists)
+        if dists[i] < space['algo']['max_eps']:
+            label = 0
+        elif dists[i] > space['algo']['max_eps'] * threshold:
+            label = 1
+
+    elif model_name == "dbscan":
         components = model.components_
         dists = np.sqrt(np.sum((components - sample)**2, axis=1))
         i = np.argmin(dists)
         if dists[i] < model.eps:
-            label = 0  # use binary (normal=0, anomaly=1)
+            label = 0  
         elif dists[i] > model.eps * threshold:
             label = 1
+
+    else:
+        print("sorry we do not handle the other algorithms yet!")
     
     return label
 
@@ -129,50 +141,54 @@ def helperEvaluateBest(conf):
         'h' : h,
         'overlap' : overlap
     }
-    algo_idx = int(conf.loc[['algo']]['value'])
-    algo = models[algo_idx]
+    model_idx = int(conf.loc[['algo']]['value'])
+    model = models[model_idx]
 
-    if algo == 'kmeans':
+    if model == 'kmeans':
         space['algo']['model'] = 'kmeans'
         space['algo']['n_clusters'] = int(conf.loc[['n_clusters']]['value'])
-    elif algo == 'minibatchkmeans':
+    elif model == 'minibatchkmeans':
         space['algo']['model'] = 'minibatchkmeans'
         space['algo']['minik_n_clusters'] = int(conf.loc[['minik_n_clusters']]['value'])
         space['algo']['max_iter'] = int(conf.loc[['max_iter']]['value'])
         space['algo']['batch_size'] = int(conf.loc[['batch_size']]['value'])
-    elif algo == 'meanshift':
+    elif model == 'meanshift':
         space['algo']['model'] = 'meanshift'
         space['algo']['bin_seeding'] = int(conf.loc[['bin_seeding']]['value'])
         space['algo']['cluster_all'] = int(conf.loc[['cluster_all']]['value'])
-    elif algo == 'dbscan':
+    elif model == 'dbscan':
         space['algo']['model'] = 'dbscan'
         space['algo']['eps'] = float(conf.loc[['eps']]['value'])
         space['algo']['min_samples'] = int(conf.loc[['min_samples']]['value'])
-    elif algo == 'optics':
+        space['algo']['metric'] = metrics[int(conf.loc[['metric']]['value'])]
+        space['algo']['algorithm'] = algorithms[int(conf.loc[['algorithm']]['value'])]
+    elif model == 'optics':
         space['algo']['model'] = 'optics'
         space['algo']['max_eps'] = float(conf.loc[['max_eps']]['value'])
         space['algo']['optics_min_samples'] = int(conf.loc[['optics_min_samples']]['value'])
-    elif algo == 'affinitypropagation':
+    elif model == 'affinitypropagation':
         space['algo']['model'] = 'affinitypropagation'
         space['algo']['damping'] = float(conf.loc[['damping']]['value'])
         space['algo']['convergence_iter'] = int(conf.loc[['convergence_iter']]['value'])
 
     return space
 
+
 if __name__ == '__main__':
     start_time = time.time()
     ################### Define Parameters ###################
-    TC = 1
-    showPlot = False
+    TC = 3
+    title = f'TC{TC}'
     threshold = 1
-    conf_file = f"output/best_TC{TC}.csv"
-    train_file = f'dataset/TC{TC}/train.csv'  
-    test_file = f'dataset/TC{TC}/test.csv'  
-    normal_file = f"output/TC{TC}_normal.csv"
-    anomaly_file = f"output/TC{TC}_anomaly.csv"
+    path = ".."
+    train_file = os.path.join(path, f'dataset/TC{TC}/train.csv')
+    test_file = os.path.join(path, f'dataset/TC{TC}/test.csv')
+    conf_file = os.path.join(path, f"output/best_TC{TC}.csv")
+    normal_file = os.path.join(path, f"output/TC{TC}_normal.csv")
+    anomaly_file = os.path.join(path, f"output/TC{TC}_anomaly.csv")
     #########################################################
     # define certain params
-    models = ['kmeans', 'minibatchkmeans','dbscan']
+    models = ['kmeans', 'minibatchkmeans','dbscan', 'optics']
     metrics =  ['cityblock', 'euclidean', 'l1', 'l2', 'manhattan']
     algorithms = ['auto', 'ball_tree', 'kd_tree', 'brute'] 
     stats = ["mean", "variance", "min", "max"]
@@ -198,10 +214,10 @@ if __name__ == '__main__':
     X_scaled = best_scaler.fit_transform(X)
     best_model.fit(X_scaled)
     X_scaled = pd.DataFrame(X_scaled, columns=X.columns)
-  
+    
     # Test Data
     test_df = pd.read_csv(test_file, header=0, index_col=None)
-    test_df = test_df[cols + ['label']] 
+    #test_df = test_df[cols + ['label']] 
     test_X = getData(test_df,space['h'],space['overlap']) 
 
     # save the training and test files containing statistical features so that they can be used in compare.py
@@ -229,4 +245,6 @@ if __name__ == '__main__':
 
     timeTaken = f'{(time.time() - start_time)/60:.2f}'
     print(f"F1: {fmeasure}. Recall: {recall}. Precision: {precision}")
+    
+   
     
