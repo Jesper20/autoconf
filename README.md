@@ -16,7 +16,8 @@ script folder:
             This script is also used for comparing the anomaly detection performance against Silhouette-Only-Approach (RQ1) 
             and the search efficiency against Random Search (RQ3)
 
-    - compare.py : for comparing against baseline anomaly detection algorithms --- One-Class SVM, Local Outlier Factor, Isolation Forest (RQ2)
+    - compare.py : for comparing against baseline anomaly detection algorithms --- 
+                    One-Class SVM, Local Outlier Factor, Isolation Forest (RQ2)
 
 Instruction:
 1. place "dataset" folder and "script" folder in a workspace
