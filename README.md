@@ -12,9 +12,9 @@ script folder:
 
     - search.py : for finding the best configuration for a given reference/train dataset, e.g. dataset/TC1/train.csv
 
-    - evaluate.py for evaluating the best configured model against the test dataset, e.g., dataset/TC1/test.csv
+    - evaluate.py for evaluating the best configured model against the test dataset, e.g., dataset/TC1/test.csv. This script is also used for comparing the anomaly detection performance against Silhouette-Only-Approach (RQ1) and the search efficiency against Random Search (RQ3)
 
-    - compare.py : for comparing against baseline anomaly detection algorithms --- One-Class SVM, Local Outlier Factor, Isolation Forest
+    - compare.py : for comparing against baseline anomaly detection algorithms --- One-Class SVM, Local Outlier Factor, Isolation Forest (RQ2)
 
 Instruction:
 1. place "dataset" folder and "script" folder in a workspace
