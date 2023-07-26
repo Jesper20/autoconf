@@ -1,4 +1,4 @@
-# automl
+# AutoConf
 
 dataset folder:
 
