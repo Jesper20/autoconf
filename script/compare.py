@@ -1,6 +1,5 @@
 # Comparing various anomaly detection algorithms
-import time
-
+import time, sys
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -51,9 +50,8 @@ def plot_prediction(X_test, y_pred, y_test, result):
 if __name__ == '__main__':
     start_time = time.time()
 
-    #test_cases = [1, 2, 3, 4, 5]
-    test_cases = [7]
-
+    test_cases = [1, 2, 3, 4]
+    
     # define outlier/anomaly detection methods to be compared.
     outliers_fraction = 0.15  # this is like a threshold -- specifies % of outliers in ref dataset
     anomaly_algorithms = [

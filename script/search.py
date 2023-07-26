@@ -1,4 +1,4 @@
-import time
+import time, sys
 import os as os
 import pickle
 import random
@@ -382,6 +382,7 @@ def objective(space):
 
 if __name__ == '__main__':
     start_time = time.time()
+   
     ################### Define Parameters ###################
     randSearch = False
     OnlySil = False # use this switch to compare with Silouette Only approach
@@ -395,7 +396,10 @@ if __name__ == '__main__':
     loss_file = os.path.join(path,f"output/losses_TC{TC}.csv")  # save losses at each trial here
     conf_file = os.path.join(path, f"output/best_TC{TC}.csv")
     train_file = os.path.join(path, f'dataset/TC{TC}/train.csv')
-    
+    try: 
+        train_file = sys.argv[1]
+    except:
+        train_file = os.path.join(path, f'dataset/TC{TC}/train.csv')
     #########################################################
     # define certain params for search space
     models = ['kmeans', 'minibatchkmeans','dbscan']

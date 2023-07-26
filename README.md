@@ -25,16 +25,19 @@ Instruction:
 2. create "output" folder in the same workspace
 
 3. create a Python virtual environment
-    $ python -m venv .
+    - $ python -m venv .
 
 4. Activate Python virtual environment
-    $ source .venv/bin/activate
+    - $ source .venv/bin/activate
 
 5. Install required Python Libraries from requirements.txt file
-    $ pip install -r requirements.txt
+    - $ pip install -r requirements.txt
 
-6. $ python3 search.py 
+6. Specify the dataset and perform the search 
+    - $ python3 search.py dataset/TC1/train.csv
 
-7. $ python3 evaluate.py 
+7. Evaluate the best configuration found by search.py against the test dataset 
+    - $ python3 evaluate.py dataset/TC1/train.csv dataset/TC1/test.csv
 
-8. $ python3 compare.py
+8. Comparison with other anomaly detection algorithms
+    - $ python3 compare.py

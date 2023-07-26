@@ -1,4 +1,4 @@
-import time
+import time, sys
 import os as os
 import numpy as np
 import pandas as pd
@@ -181,8 +181,16 @@ if __name__ == '__main__':
     title = f'TC{TC}'
     threshold = 1
     path = ".."
-    train_file = os.path.join(path, f'dataset/TC{TC}/train.csv')
-    test_file = os.path.join(path, f'dataset/TC{TC}/test.csv')
+    try: 
+        train_file = sys.argv[1]
+    except:
+        train_file = os.path.join(path, f'dataset/TC{TC}/train.csv')
+    
+    try: 
+        test_file = sys.argv[1]
+    except:
+        test_file = os.path.join(path, f'dataset/TC{TC}/test.csv')
+
     conf_file = os.path.join(path, f"output/best_TC{TC}.csv")
     normal_file = os.path.join(path, f"output/TC{TC}_normal.csv")
     anomaly_file = os.path.join(path, f"output/TC{TC}_anomaly.csv")
